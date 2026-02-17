@@ -1,207 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Spin Wheel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1e1e2f, #2c2c54);
-      color: white;
-      text-align: center;
-    }
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wheel Spinner</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #ffffff;
+  margin: 0;
+}
 
-    .card {
-      background: rgba(255,255,255,0.08);
-      backdrop-filter: blur(12px);
-      padding: 25px;
-      border-radius: 20px;
-      width: 90%;
-      max-width: 450px;
-      margin: 40px auto;
-      box-shadow: 0 0 30px rgba(0,0,0,0.5);
-    }
+.container {
+  max-width: 500px;
+  margin: 20px auto;
+}
 
-    textarea {
-      width: 100%;
-      height: 100px;
-      border-radius: 10px;
-      border: none;
-      padding: 10px;
-      font-size: 16px;
-      resize: none;
-    }
+textarea {
+  width: 100%;
+  height: 120px;
+  padding: 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
 
-    button {
-      margin-top: 15px;
-      padding: 12px 25px;
-      border-radius: 30px;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-      background: linear-gradient(45deg, #ff6b6b, #feca57);
-      color: white;
-      transition: 0.3s;
-    }
+button {
+  margin: 10px 5px;
+  padding: 10px 18px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background: #2f80ed;
+  color: white;
+}
 
-    button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 15px #feca57;
-    }
+button:hover {
+  background: #1c5dc9;
+}
 
-    canvas {
-      margin-top: 20px;
-    }
+canvas {
+  margin-top: 20px;
+}
 
-    #result {
-      font-size: 22px;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-  </style>
+#winnerDisplay {
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 15px;
+}
+</style>
 </head>
 <body>
 
-<div class="card">
-  <h2>🎡 Spin The Wheel</h2>
-  <textarea id="namesInput" placeholder="Enter names (one per line)"></textarea>
-  <button onclick="createWheel()">Create Wheel</button>
+<div class="container">
+  <h2>Wheel of Names</h2>
+  <textarea id="namesInput" placeholder="Enter names (comma after winner)
+Example:
+Alice
+Bob,
+Charlie"></textarea><br>
+  <button onclick="createWheel()">Update</button>
 
-  <div id="wheelSection" style="display:none;">
-    <canvas id="wheel" width="350" height="350"></canvas><br>
-    <button onclick="spin()">Spin</button>
-    <div id="result"></div>
-  </div>
+  <canvas id="wheel" width="400" height="400"></canvas><br>
+  <button onclick="spin()">Spin</button>
+
+  <div id="winnerDisplay"></div>
 </div>
 
 <script>
-let options = [];
-let chosenWinner = "";
-let currentAngle = 0;
+let names = [];
+let riggedIndex = -1;
+let currentRotation = 0;
 let spinning = false;
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 
 function createWheel() {
-  options = document.getElementById("namesInput").value
+  const raw = document.getElementById("namesInput").value
     .split("\n")
     .map(n => n.trim())
     .filter(n => n);
 
-  if (options.length < 2) {
-    alert("Enter at least 2 names.");
-    return;
-  }
+  names = [];
+  riggedIndex = -1;
 
-  chosenWinner = prompt("Secretly enter winner name:");
-  if (!options.includes(chosenWinner)) {
-    alert("Name not found!");
-    return;
-  }
+  raw.forEach((name, i) => {
+    if (name.endsWith(",")) {
+      name = name.slice(0, -1);
+      riggedIndex = names.length;
+    }
+    names.push(name);
+  });
 
-  document.getElementById("wheelSection").style.display = "block";
   drawWheel();
 }
 
 function drawWheel() {
-  const arcSize = (2 * Math.PI) / options.length;
-  ctx.clearRect(0, 0, 350, 350);
+  if (names.length === 0) return;
 
-  for (let i = 0; i < options.length; i++) {
+  const arc = 2 * Math.PI / names.length;
+
+  ctx.clearRect(0, 0, 400, 400);
+
+  for (let i = 0; i < names.length; i++) {
     ctx.beginPath();
-    ctx.moveTo(175, 175);
-    ctx.arc(175, 175, 175,
-      currentAngle + i * arcSize,
-      currentAngle + (i + 1) * arcSize
-    );
-    ctx.fillStyle = `hsl(${i * 360 / options.length}, 80%, 60%)`;
+    ctx.moveTo(200, 200);
+    ctx.arc(200, 200, 200,
+      currentRotation + i * arc,
+      currentRotation + (i + 1) * arc);
+    ctx.fillStyle = `hsl(${i * 360 / names.length}, 70%, 55%)`;
     ctx.fill();
 
     ctx.save();
-    ctx.translate(175, 175);
-    ctx.rotate(currentAngle + i * arcSize + arcSize / 2);
+    ctx.translate(200, 200);
+    ctx.rotate(currentRotation + i * arc + arc / 2);
     ctx.textAlign = "right";
     ctx.fillStyle = "white";
-    ctx.font = "bold 16px Segoe UI";
-    ctx.fillText(options[i], 160, 5);
+    ctx.font = "bold 16px Arial";
+    ctx.fillText(names[i], 180, 5);
     ctx.restore();
   }
 
   // Pointer
   ctx.beginPath();
-  ctx.moveTo(175, 0);
-  ctx.lineTo(160, 25);
-  ctx.lineTo(190, 25);
-  ctx.fillStyle = "white";
+  ctx.moveTo(200, 0);
+  ctx.lineTo(185, 25);
+  ctx.lineTo(215, 25);
+  ctx.fillStyle = "black";
   ctx.fill();
 }
 
 function spin() {
-  if (spinning) return;
+  if (spinning || names.length < 2) return;
   spinning = true;
-  document.getElementById("result").textContent = "";
+  document.getElementById("winnerDisplay").textContent = "";
 
-  const arcSize = (2 * Math.PI) / options.length;
-  const winnerIndex = options.indexOf(chosenWinner);
+  const arc = 2 * Math.PI / names.length;
 
-  const targetAngle =
-    (3 * Math.PI / 2) -
-    (winnerIndex * arcSize) -
-    (arcSize / 2);
+  // If no comma rig, pick random
+  let winnerIndex = riggedIndex >= 0
+    ? riggedIndex
+    : Math.floor(Math.random() * names.length);
+
+  // Calculate EXACT target rotation
+  const targetRotation =
+    (3 * Math.PI / 2) - // pointer top
+    (winnerIndex * arc) -
+    (arc / 2);
 
   const extraSpins = 10 * 2 * Math.PI;
-  const finalAngle = currentAngle + extraSpins + targetAngle;
 
-  const duration = 4500;
-  const start = performance.now();
+  const startRotation = currentRotation;
+  const finalRotation = extraSpins + targetRotation;
+
+  const duration = 5000;
+  const startTime = performance.now();
 
   function animate(time) {
-    const progress = Math.min((time - start) / duration, 1);
-    const easeOut = 1 - Math.pow(1 - progress, 4);
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
 
-    currentAngle = currentAngle + (finalAngle - currentAngle) * easeOut;
+    // Smooth cubic ease-out
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    currentRotation =
+      startRotation +
+      (finalRotation - startRotation) * ease;
+
     drawWheel();
 
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
-      currentAngle = finalAngle;
+      currentRotation = finalRotation % (2 * Math.PI);
       spinning = false;
-      celebrate();
-      document.getElementById("result").textContent =
-        "🎉 Winner: " + chosenWinner;
+      document.getElementById("winnerDisplay").textContent =
+        "Winner: " + names[winnerIndex];
     }
   }
 
   requestAnimationFrame(animate);
-}
-
-function celebrate() {
-  for (let i = 0; i < 120; i++) {
-    const confetti = document.createElement("div");
-    confetti.style.position = "fixed";
-    confetti.style.width = "8px";
-    confetti.style.height = "8px";
-    confetti.style.background =
-      `hsl(${Math.random()*360}, 100%, 60%)`;
-    confetti.style.left = Math.random()*100 + "vw";
-    confetti.style.top = "-10px";
-    confetti.style.opacity = 1;
-    confetti.style.borderRadius = "50%";
-    document.body.appendChild(confetti);
-
-    const fall = setInterval(() => {
-      confetti.style.top =
-        parseFloat(confetti.style.top) + 5 + "px";
-      confetti.style.opacity -= 0.02;
-      if (parseFloat(confetti.style.top) > window.innerHeight) {
-        clearInterval(fall);
-        confetti.remove();
-      }
-    }, 20);
-  }
 }
 </script>
 
