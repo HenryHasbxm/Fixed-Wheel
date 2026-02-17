@@ -7,13 +7,15 @@
       text-align: center;
       font-family: Arial, sans-serif;
     }
-
     canvas {
       margin-top: 20px;
     }
-
+    textarea {
+      width: 300px;
+      height: 100px;
+    }
     button {
-      margin-top: 20px;
+      margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
     }
@@ -21,28 +23,55 @@
 </head>
 <body>
 
-<h2>Spin the Wheel!</h2>
-<canvas id="wheel" width="400" height="400"></canvas>
-<br>
-<button onclick="spin()">Spin</button>
+<h2>Enter Names (One Per Line)</h2>
+<textarea id="namesInput"></textarea><br>
+<button onclick="createWheel()">Create Wheel</button>
+
+<div id="wheelSection" style="display:none;">
+  <canvas id="wheel" width="400" height="400"></canvas><br>
+  <button onclick="spin()">Spin</button>
+</div>
 
 <script>
-const options = ["Alice", "Bob", "Charlie", "David", "Eve"];
-const chosenWinner = "Charlie"; // 👈 CHANGE THIS to whoever you want it to land on
+let options = [];
+let chosenWinner = "";
+let angle = 0;
+let spinning = false;
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 
-const numOptions = options.length;
-const arcSize = (2 * Math.PI) / numOptions;
-let angle = 0;
+function createWheel() {
+  const input = document.getElementById("namesInput").value;
+  options = input.split("\n").map(name => name.trim()).filter(name => name);
+
+  if (options.length < 2) {
+    alert("Enter at least 2 names.");
+    return;
+  }
+
+  // SECRET WINNER SELECTION
+  chosenWinner = prompt("Enter the name you want it to land on:");
+  if (!options.includes(chosenWinner)) {
+    alert("That name is not in the list!");
+    return;
+  }
+
+  document.getElementById("wheelSection").style.display = "block";
+  drawWheel();
+}
 
 function drawWheel() {
+  const numOptions = options.length;
+  const arcSize = (2 * Math.PI) / numOptions;
+
+  ctx.clearRect(0, 0, 400, 400);
+
   for (let i = 0; i < numOptions; i++) {
     ctx.beginPath();
     ctx.moveTo(200, 200);
     ctx.arc(200, 200, 200, angle + i * arcSize, angle + (i + 1) * arcSize);
-    ctx.fillStyle = i % 2 === 0 ? "#FFDD57" : "#FF6F61";
+    ctx.fillStyle = i % 2 === 0 ? "#FFD700" : "#FF6347";
     ctx.fill();
     ctx.save();
     ctx.translate(200, 200);
@@ -53,22 +82,53 @@ function drawWheel() {
     ctx.fillText(options[i], 180, 10);
     ctx.restore();
   }
+
+  // Pointer
+  ctx.beginPath();
+  ctx.moveTo(200, 0);
+  ctx.lineTo(190, 20);
+  ctx.lineTo(210, 20);
+  ctx.fillStyle = "black";
+  ctx.fill();
 }
 
-drawWheel();
-
 function spin() {
+  if (spinning) return;
+  spinning = true;
+
+  const numOptions = options.length;
+  const arcSize = (2 * Math.PI) / numOptions;
   const winnerIndex = options.indexOf(chosenWinner);
 
-  // Calculate angle so chosen winner lands at top (pointer position)
-  const targetAngle = (3 * Math.PI / 2) - (winnerIndex * arcSize) - (arcSize / 2);
+  const targetAngle =
+    (3 * Math.PI / 2) -
+    (winnerIndex * arcSize) -
+    (arcSize / 2);
 
-  // Add extra spins for effect
-  const spins = 6 * 2 * Math.PI;
-  angle += spins + targetAngle;
+  const extraSpins = 8 * 2 * Math.PI;
+  const finalAngle = angle + extraSpins + targetAngle;
 
-  ctx.clearRect(0, 0, 400, 400);
-  drawWheel();
+  const duration = 4000;
+  const start = performance.now();
+
+  function animate(time) {
+    const elapsed = time - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+
+    angle = angle + (finalAngle - angle) * easeOut;
+
+    drawWheel();
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      angle = finalAngle;
+      spinning = false;
+    }
+  }
+
+  requestAnimationFrame(animate);
 }
 </script>
 
