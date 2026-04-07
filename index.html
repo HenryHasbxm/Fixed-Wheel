@@ -2,15 +2,17 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wheel Spinner</title>
+<title>wheel of names</title>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  /* We remove the hardcoded color here so JS can take over easily */
-  background: #808080; 
-  transition: background 0.3s ease; /* Smooth color transition */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #808080;
+  transition: background 0.3s ease;
+  overflow: hidden; /* Prevents scrollbars during confetti */
 }
 
 .wrapper {
@@ -25,106 +27,138 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 canvas {
   max-width: 90%;
   height: auto;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
 }
 
 button {
-  margin-top: 15px;
-  padding: 12px 20px;
-  font-size: 16px;
+  margin-top: 25px;
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: bold;
   border: none;
-  border-radius: 6px;
+  border-radius: 50px;
   background: #2f80ed;
   color: white;
   cursor: pointer;
+  box-shadow: 0 4px 15px rgba(47, 128, 237, 0.4);
+  transition: transform 0.2s;
 }
 
 button:hover {
   background: #1c5dc9;
+  transform: scale(1.05);
 }
 
-#winnerDisplay {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 15px;
+button:active {
+  transform: scale(0.95);
 }
 
-/* RIGHT SIDE (Names & Settings) */
+/* RIGHT SIDE (Names) */
 .list-area {
   width: 320px;
-  border-left: 2px solid #ddd;
-  padding: 15px;
+  border-left: 1px solid rgba(255,255,255,0.2);
+  padding: 20px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.1); /* Slight overlay to keep text readable */
-}
-
-/* New style for the color picker container */
-.settings-item {
-  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+
+.settings-item {
+  margin-bottom: 20px;
 }
 
 textarea {
+  flex-grow: 1;
   width: 100%;
-  height: 70%; /* Adjusted height to make room for picker */
   resize: none;
-  padding: 10px;
+  padding: 12px;
   font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
   box-sizing: border-box;
+}
+
+/* MODAL / POP-UP STYLE */
+#winnerModal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 80%;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-content h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #666;
+}
+
+.modal-content #winnerText {
+  font-size: 48px;
+  margin: 10px 0;
+  color: #2f80ed;
+}
+
+.close-btn {
+  margin-top: 20px;
+  background: #333;
 }
 
 /* PHONE LAYOUT */
 @media (max-width: 768px) {
-  .wrapper {
-    flex-direction: column;
-  }
-
-  .list-area {
-    width: 100%;
-    height: auto;
-    border-left: none;
-    border-top: 1px solid #ddd;
-  }
-
-  textarea {
-    height: 150px;
-  }
+  .wrapper { flex-direction: column; }
+  .list-area { width: 100%; height: 250px; border-left: none; }
 }
 </style>
 </head>
 <body>
 
-<div class="wrapper">
+<div id="winnerModal">
+  <div class="modal-content">
+    <h1>AND THE WINNER IS...</h1>
+    <div id="winnerText"></div>
+    <button class="close-btn" onclick="closeModal()">Awesome!</button>
+  </div>
+</div>
 
+<div class="wrapper">
   <div class="wheel-area">
     <canvas id="wheel" width="400" height="400"></canvas>
-    <button onclick="spin()">Spin</button>
-    <div id="winnerDisplay"></div>
+    <button onclick="spin()">SPIN WHEEL</button>
   </div>
 
   <div class="list-area">
     <div class="settings-item">
-      <label for="bgPicker" style="font-weight:bold;">Background Color:</label>
-      <input type="color" id="bgPicker" value="#808080" style="width: 100%; height: 40px; cursor: pointer;">
+      <label style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">Background:</label>
+      <input type="color" id="bgPicker" value="#808080" style="width: 100%; height: 35px; border:none; border-radius:5px;">
     </div>
-
-    <h3>Names</h3>
-    <textarea id="namesInput" placeholder="Put one name per line
-Add comma after requested winner to rig
-
-Example:
-Henry
-Mason
-Bob,
-Charlie"></textarea>
+    <h3 style="color: white; margin: 0 0 10px 0;">Names</h3>
+    <textarea id="namesInput" placeholder="One name per line..."></textarea>
   </div>
-
 </div>
 
 <script>
@@ -136,9 +170,10 @@ let spinning = false;
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 const textarea = document.getElementById("namesInput");
-const bgPicker = document.getElementById("bgPicker"); // Get the picker
+const bgPicker = document.getElementById("bgPicker");
+const modal = document.getElementById("winnerModal");
+const winnerText = document.getElementById("winnerText");
 
-// LISTENER: Change background color when picker moves
 bgPicker.addEventListener("input", (e) => {
     document.body.style.backgroundColor = e.target.value;
 });
@@ -146,14 +181,9 @@ bgPicker.addEventListener("input", (e) => {
 textarea.addEventListener("input", updateNames);
 
 function updateNames() {
-  const raw = textarea.value
-    .split("\n")
-    .map(n => n.trim())
-    .filter(n => n);
-
+  const raw = textarea.value.split("\n").map(n => n.trim()).filter(n => n);
   names = [];
   riggedIndex = -1;
-
   raw.forEach(name => {
     if (name.endsWith(",")) {
       name = name.slice(0, -1);
@@ -161,25 +191,19 @@ function updateNames() {
     }
     names.push(name);
   });
-
   drawWheel();
 }
 
 function drawWheel() {
   ctx.clearRect(0, 0, 400, 400);
   if (names.length === 0) return;
-
   const arc = 2 * Math.PI / names.length;
-
   for (let i = 0; i < names.length; i++) {
     ctx.beginPath();
     ctx.moveTo(200, 200);
-    ctx.arc(200, 200, 200,
-      currentRotation + i * arc,
-      currentRotation + (i + 1) * arc);
+    ctx.arc(200, 200, 200, currentRotation + i * arc, currentRotation + (i + 1) * arc);
     ctx.fillStyle = `hsl(${i * 360 / names.length}, 70%, 55%)`;
     ctx.fill();
-
     ctx.save();
     ctx.translate(200, 200);
     ctx.rotate(currentRotation + i * arc + arc / 2);
@@ -189,34 +213,21 @@ function drawWheel() {
     ctx.fillText(names[i], 180, 5);
     ctx.restore();
   }
-
   // Pointer
   ctx.beginPath();
-  ctx.moveTo(200, 0);
-  ctx.lineTo(185, 25);
-  ctx.lineTo(215, 25);
-  ctx.fillStyle = "black";
-  ctx.fill();
+  ctx.moveTo(200, 0); ctx.lineTo(185, 25); ctx.lineTo(215, 25);
+  ctx.fillStyle = "black"; ctx.fill();
 }
 
 function spin() {
   if (spinning || names.length < 2) return;
   spinning = true;
-  document.getElementById("winnerDisplay").textContent = "";
 
   const arc = 2 * Math.PI / names.length;
+  let winnerIndex = riggedIndex >= 0 ? riggedIndex : Math.floor(Math.random() * names.length);
 
-  let winnerIndex = riggedIndex >= 0
-    ? riggedIndex
-    : Math.floor(Math.random() * names.length);
-
-  const target =
-    (3 * Math.PI / 2) -
-    (winnerIndex * arc) -
-    (arc / 2);
-
+  const target = (3 * Math.PI / 2) - (winnerIndex * arc) - (arc / 2);
   const extraSpins = 12 * 2 * Math.PI;
-
   const startRotation = currentRotation;
   const finalRotation = extraSpins + target;
 
@@ -226,27 +237,37 @@ function spin() {
   function animate(time) {
     const progress = Math.min((time - startTime) / duration, 1);
     const ease = 1 - Math.pow(1 - progress, 4);
-
-    currentRotation =
-      startRotation +
-      (finalRotation - startRotation) * ease;
-
+    currentRotation = startRotation + (finalRotation - startRotation) * ease;
     drawWheel();
-
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
       currentRotation = finalRotation % (2 * Math.PI);
       spinning = false;
-      document.getElementById("winnerDisplay").textContent =
-        "Winner: " + names[winnerIndex];
+      showWinner(names[winnerIndex]);
     }
   }
-
   requestAnimationFrame(animate);
 }
 
-// Initial draw
+function showWinner(name) {
+  // Trigger Confetti
+  confetti({
+    particleCount: 150,
+    spread: 70,
+    origin: { y: 0.6 },
+    zIndex: 200
+  });
+
+  // Show Modal
+  winnerText.textContent = name;
+  modal.style.display = "flex";
+}
+
+function closeModal() {
+  modal.style.display = "none";
+}
+
 drawWheel();
 </script>
 
