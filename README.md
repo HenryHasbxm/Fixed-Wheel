@@ -10,7 +10,11 @@ Please remember to turn on rigging and put the comma for the rig to work.
 example:
 
 Carter
+
 Joseph
+
 Henry,
+
 Logan
+
                                 Toggle On
